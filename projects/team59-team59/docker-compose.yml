@@ -1,57 +1,31 @@
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    image: hwp-agent-backend:0.1.0
+    env_file:
+      - .env
+    environment:
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    # No volumes for user data — sessions are in-memory only.
+
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    image: hwp-agent-frontend:0.1.0
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+      BACKEND_URL: "http://backend:8000"
     depends_on:
       backend:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
-    environment:
-      - SOLAR_API_KEY=${SOLAR_API_KEY}
-      - HWPX_MCP_URL=${HWPX_MCP_URL:-http://hwpx-mcp:3001}
-    volumes:
-      - sessions:/tmp/sessions
-    depends_on:
-      hwpx-mcp:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
-  hwpx-mcp:
-    build:
-      context: ./hwpx-mcp
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
-    volumes:
-      - sessions:/tmp/sessions
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-
-volumes:
-  sessions:
+      - "8501:8501"
